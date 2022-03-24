@@ -11,7 +11,7 @@
 _start:
 # START Interrupt Vector Table [[
         jmp     __PMSIZE-4         # RESET Vector
-        jmp     _watchdog_isr   # WATCHDOG Vector # TODO: Change me to reset the chip proper
+        jmp     interrupt_33	   # Watchdog reset vector
         jmp     interrupt_0
         jmp     interrupt_1
         jmp     interrupt_2
@@ -44,7 +44,7 @@ _start:
         jmp     interrupt_29
         jmp     interrupt_30
         jmp     interrupt_31
-        jmp     __PMSIZE-8
+        jmp     __PMSIZE-8				#Interrupt vector 32 (NMI)
 # ]] END Interrupt Vector Table
 
 codestart:
@@ -111,9 +111,9 @@ _exit:
         sta.l   EXITEXIT,$r0    # simulator end of test
         jmp     _exithook
 
-_watchdog_isr:
-        ldk     $sp,__RAMSIZE
-        jmp     __PMSIZE-4
+#_watchdog_isr:
+#        ldk     $sp,__RAMSIZE
+#        jmp     __PMSIZE-4
 
 # Macro to construct the interrupt stub code.
 # it just saves r0, loads r0 with the int vector
@@ -159,6 +159,7 @@ interrupt_\i:
         inth    30
         inth    31
         inth    32
+        inth    33
 
         # On entry: r0, already saved, holds the handler function
 interrupt_common:
@@ -201,9 +202,9 @@ nullvector:
 
 .section .data
 .global vector_table
+	.align (4)			# assembler alignment is in the power of 2 (in this case 2^4)
 vector_table:
-		.align (2)
-        .rept 33
+        .rept 34
                 .long   nullvector
         .endr
 
