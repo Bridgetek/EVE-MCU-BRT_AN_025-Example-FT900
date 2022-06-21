@@ -31,6 +31,15 @@ SECTIONS
     	
   }  > flash
   
+  .data	  : AT (ADDR (.text) + SIZEOF (.text))
+  {
+  _sdata = .;
+    *(.data)
+    *(.rodata)
+    *(.rodata*)
+     _edata = . ;
+  }  > ram
+
   .tors :
   {
     ___ctors = . ;
@@ -41,17 +50,6 @@ SECTIONS
     ___dtors_end = . ;
     . = ALIGN(4);
   } > ram
-  
-  .data	  : AT (ADDR (.text) + SIZEOF (.text))
-  {
-  _sdata = .;
-    *(.data)
-    *(.rodata)
-    *(.rodata*)
-     _edata = . ;
-  }  > ram
-  
-
 
   .configs LOADADDR(.text) + SIZEOF(.text) + SIZEOF (.data) : AT (ADDR (.text) + SIZEOF (.text) + SIZEOF(.data))
   {
@@ -89,7 +87,7 @@ SECTIONS
 	
   }  > flash
 
-  .bss  SIZEOF(.data) + ADDR(.data) (NOLOAD) :
+  .bss  SIZEOF(.tors) + SIZEOF(.data) + ADDR(.data) (NOLOAD) :
   {
      _bss_start = . ;
     *(.bss)
