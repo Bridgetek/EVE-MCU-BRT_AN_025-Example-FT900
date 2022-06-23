@@ -66,22 +66,24 @@
 
 #include "eve_example.h"
 
+/**
+ @brief Signature for successful storage of calibration data.
+ @details The presence of this signature indicates that the calibration
+ 	 	  data has been stored correctly.
+ */
 
 /**
- @brief Link to datalogger area defined in crt0.S file.
- @details Must be passed to dlog library functions to initialise and use
-        datalogger functions. We use the datalogger area for persistent
-        configuration storage.
+ @brief Defined area in flash to store EVE calibration data.
+ @details This 256 byte array is initialised to all 1s. It will be used to store the
+ 	 touch screen calibration data. There is a key placed at the start of the array
+ 	 when the calibration is programmed, this indicates that the data is valid.
+ 	 Only if this array is in place will calibration data be programmed.
+ 	 The size is 256 bytes and it is aligned on a 256 byte boundary as the minimum
+ 	 programmable Flash sector is 256 bytes.
  */
-extern __flash__ uint32_t __dlog_partition[];
+__flash__ uint8_t __attribute__((aligned(256))) dlog_pm[256] = {[0 ... 255] = 0xff };
 
 /* CONSTANTS ***********************************************************************/
-
-/**
- @brief Page number in datalogger memory in Flash for touchscreen calibration
- values.
- */
-#define CONFIG_PAGE_TOUCHSCREEN 0
 
 /* LOCAL FUNCTIONS / INLINES *******************************************************/
 
@@ -97,53 +99,70 @@ void tfp_putc(void* p, char c);
 //@{
 int8_t platform_calib_init(void)
 {
-	int	pgsz;
-	int	i;
-	int ret;
+	const __flash__ struct touchscreen_calibration *pcalibpm = (const __flash__ struct touchscreen_calibration *)dlog_pm;
 
-	ret = dlog_init(__dlog_partition, &pgsz, &i);
-	if (ret < 0)
+	/* Check that there is an area set aside in the data section for calibration data. */
+	if ((pcalibpm->key != VALID_KEY_TOUCHSCREEN) && (pcalibpm->key != 0xFFFFFFFF))
 	{
-		// Project settings incorrect. Require dlog support with modified
-		// linker script and crt0.S file.
-		// See AN_398 for examples.
-		return -1;
+		if (((uint32_t)pcalibpm & 255) != 0)
+		{
+			/* An aligned 256 byte Flash sector not has been correctly setup for calibration data. */
+			return -1;
+		}
 	}
+
 	return 0;
 }
 
 int8_t platform_calib_write(struct touchscreen_calibration *calib)
 {
-	uint8_t	flashbuf[260] __attribute__((aligned(4)));
-	dlog_erase();
+	uint8_t	dlog_flash[260] __attribute__((aligned(4)));
+	struct touchscreen_calibration *pcalibflash = (struct touchscreen_calibration *)dlog_flash;
 
-	calib->key = VALID_KEY_TOUCHSCREEN;
-	memset(flashbuf, 0xff, sizeof(flashbuf));
-	memcpy(flashbuf, calib, sizeof(struct touchscreen_calibration));
-	if (dlog_prog(CONFIG_PAGE_TOUCHSCREEN, (uint32_t *)flashbuf) < 0)
+	/* Read calibration data from Flash to a properly aligned array. */
+	CRITICAL_SECTION_BEGIN
+	memcpy_flash2dat((void *)dlog_flash, (uint32_t)dlog_pm, 256);
+	CRITICAL_SECTION_END
+
+	/* Check that the Flash blank, so it is possible to write to this sector in Flash. */
+	if (pcalibflash->key == 0xFFFFFFFF)
 	{
-		// Flash not written.
-		return -1;
+		/* Copy calibration data into a properly aligned array. */
+		calib->key = VALID_KEY_TOUCHSCREEN;
+		memset(dlog_flash, 0xff, sizeof(dlog_flash));
+		memcpy(dlog_flash, calib, sizeof(struct touchscreen_calibration));
+
+		CRITICAL_SECTION_BEGIN
+		/* This are must be set to 0xff for Flash programming to work. */
+		memcpy_dat2flash ((uint32_t)dlog_pm, dlog_flash, 256);
+		CRITICAL_SECTION_END;
+
+		return 0;
 	}
 
-	return 0;
+	return -1;
 }
 
 int8_t platform_calib_read(struct touchscreen_calibration *calib)
 {
-	uint8_t	flashbuf[260] __attribute__((aligned(4)));
-	memset(flashbuf, 0x00, sizeof(flashbuf));
-	if (dlog_read(CONFIG_PAGE_TOUCHSCREEN, (uint32_t *)flashbuf) < 0)
+	uint8_t dlog_flash[256] __attribute__((aligned(4)));
+	struct touchscreen_calibration *pcalibflash = (struct touchscreen_calibration *)dlog_flash;
+
+	/* Read calibration data from Flash to a properly aligned array. */
+	CRITICAL_SECTION_BEGIN
+	memcpy_flash2dat((void *)dlog_flash, (uint32_t)dlog_pm, 256);
+	CRITICAL_SECTION_END
+
+	/* Flash blank, program memory blank: flash calibration data blank. */
+	if (pcalibflash->key != VALID_KEY_TOUCHSCREEN)
 	{
-		return -1;
+		return -2;
 	}
 
-	if (((struct touchscreen_calibration *)flashbuf)->key == VALID_KEY_TOUCHSCREEN)
-	{
-		memcpy(calib, flashbuf, sizeof(struct touchscreen_calibration));
-		return 0;
-	}
-	return -2;
+	/* Calibration data is valid. */
+	memcpy(calib, dlog_flash, sizeof(struct touchscreen_calibration));
+
+	return 0;
 }
 //@}
 

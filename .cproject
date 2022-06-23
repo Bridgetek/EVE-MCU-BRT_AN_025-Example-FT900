@@ -49,9 +49,8 @@
 							<tool id="com.brtchip.linker.ft900.debug.base.2084718984" name="FT9xx GCC Linker" superClass="com.brtchip.linker.ft900.debug.base">
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.brtchip.managedbuild.gnu.cross.ft90x.build.gcc.c.linker.option.ldOther.1437892361" name="Other options (-Xlinker [option])" superClass="com.brtchip.managedbuild.gnu.cross.ft90x.build.gcc.c.linker.option.ldOther" useByScannerDiscovery="false" valueType="stringList">
 									<listOptionValue builtIn="false" value="--defsym=__FT900__=1"/>
-									<listOptionValue builtIn="false" value="-T ../scripts/ldscript.ld"/>
 								</option>
-								<option id="com.brtchip.managedbuild.gnu.cross.ft90x.build.gcc.c.linker.option.nostartfiles.469520718" name="Do not use standard start files (-nostartfiles)" superClass="com.brtchip.managedbuild.gnu.cross.ft90x.build.gcc.c.linker.option.nostartfiles" useByScannerDiscovery="false" value="true" valueType="boolean"/>
+								<option id="com.brtchip.managedbuild.gnu.cross.ft90x.build.gcc.c.linker.option.nostartfiles.469520718" name="Do not use standard start files (-nostartfiles)" superClass="com.brtchip.managedbuild.gnu.cross.ft90x.build.gcc.c.linker.option.nostartfiles" useByScannerDiscovery="false" value="false" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.629369735" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
